@@ -9,20 +9,22 @@ import { useState } from "react";
 import { BeatLoader } from "react-spinners";
 import { ToastContainer, toast } from "react-toastify";
 import { auth } from "./config/firebase";
+import { updateProfile, signOut } from "firebase/auth";
 import {
-	createUserWithEmailAndPassword,
-	updateProfile,
-	signOut,
-} from "firebase/auth";
+	useSignInWithGoogle,
+	useCreateUserWithEmailAndPassword,
+} from "react-firebase-hooks/auth";
 import "react-toastify/dist/ReactToastify.css";
 
 function App() {
 	const [nameInput, setNameInput] = useState("");
 	const [emailInput, setSetEmailInput] = useState("");
 	const [passwordInput, setPasswordInput] = useState("");
-	const [loading, setLoading] = useState(false);
-
-	auth ? signOut(auth) : null;
+	const [loadingScreen, setLoading] = useState(false);
+	const [signInWithGoogle, userGoogle, loadingGoogle, errorGoogle] =
+		useSignInWithGoogle(auth);
+	const [createUserWithEmailAndPassword, userEmail, loadingEmail, errorEmail] =
+		useCreateUserWithEmailAndPassword(auth);
 
 	function showNotification(text, type) {
 		if (text && text !== "") {
@@ -42,11 +44,10 @@ function App() {
 	async function signUpWithEmail() {
 		try {
 			setLoading(true);
-			await createUserWithEmailAndPassword(auth, emailInput, passwordInput);
-			const currentUser = auth.currentUser;
+			await createUserWithEmailAndPassword(emailInput, passwordInput);
 
-			if (currentUser) {
-				await updateProfile(currentUser, {
+			if (userEmail) {
+				await updateProfile(userEmail, {
 					displayName: nameInput,
 				});
 				showNotification("Conta criada com sucesso.", "success");
@@ -58,7 +59,7 @@ function App() {
 			showNotification("Ocorreu um erro ao criar a conta.", "error");
 		} finally {
 			setLoading(false);
-			console.log(auth.currentUser);
+			console.log(userEmail);
 		}
 	}
 
@@ -70,10 +71,18 @@ function App() {
 		);
 	}
 
-	if (loading) {
+	if (loadingScreen || loadingGoogle || loadingEmail) {
 		return (
 			<main className="w-screen h-screen flex flex-col justify-center items-center">
 				<BeatLoader size={30} color="#121063" />
+			</main>
+		);
+	}
+
+	if ((errorEmail, errorGoogle)) {
+		return (
+			<main className="w-screen h-screen flex flex-col justify-center items-center">
+				<span>Ocorreu um erro: {error.message}</span>
 			</main>
 		);
 	}
@@ -158,7 +167,9 @@ function App() {
 						Acessar
 					</button>
 					<span className="flex w-full justify-center my-2">OU</span>
-					<button className="bg-light text-midnight transition-all hover:bg-zinc-400 w-full uppercase flex justify-center items-center gap-3 p-2 rounded-md">
+					<button
+						onClick={() => signInWithGoogle()}
+						className="bg-light text-midnight transition-all hover:bg-zinc-400 w-full uppercase flex justify-center items-center gap-3 p-2 rounded-md">
 						<FaGoogle />
 						Continue with Google
 					</button>
