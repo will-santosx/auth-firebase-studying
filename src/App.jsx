@@ -8,6 +8,12 @@ import {
 import { useState } from "react";
 import { BeatLoader } from "react-spinners";
 import { ToastContainer, toast } from "react-toastify";
+import { auth } from "./config/firebase";
+import {
+	createUserWithEmailAndPassword,
+	updateProfile,
+	signOut,
+} from "firebase/auth";
 import "react-toastify/dist/ReactToastify.css";
 
 function App() {
@@ -15,7 +21,8 @@ function App() {
 	const [emailInput, setSetEmailInput] = useState("");
 	const [passwordInput, setPasswordInput] = useState("");
 	const [loading, setLoading] = useState(false);
-	const [notified, setNotified] = useState(true);
+
+	auth ? signOut(auth) : null;
 
 	function showNotification(text, type) {
 		if (text && text !== "") {
@@ -30,6 +37,37 @@ function App() {
 					toast.info(`${text}`);
 			}
 		}
+	}
+
+	async function signUpWithEmail() {
+		try {
+			setLoading(true);
+			await createUserWithEmailAndPassword(auth, emailInput, passwordInput);
+			const currentUser = auth.currentUser;
+
+			if (currentUser) {
+				await updateProfile(currentUser, {
+					displayName: nameInput,
+				});
+				showNotification("Conta criada com sucesso.", "success");
+			} else {
+				showNotification("Ocorreu um erro ao criar a conta.", "error");
+			}
+		} catch (error) {
+			console.error("Ocorreu um erro:", error);
+			showNotification("Ocorreu um erro ao criar a conta.", "error");
+		} finally {
+			setLoading(false);
+			console.log(auth.currentUser);
+		}
+	}
+
+	if (auth.currentUser) {
+		return (
+			<main className="w-screen h-screen flex flex-col justify-center items-center">
+				<span>Logado.</span>
+			</main>
+		);
 	}
 
 	if (loading) {
@@ -66,6 +104,7 @@ function App() {
 				<form
 					onSubmit={(event) => {
 						event.preventDefault();
+						signUpWithEmail();
 					}}
 					className="mt-10">
 					<div className="flex bg-light px-2 py-1 items-center rounded-md gap-2 mb-4 focus-within:shadow-md">
@@ -112,13 +151,13 @@ function App() {
 							className="bg-transparent flex-1 focus:outline-none"
 						/>
 					</div>
-					<span className="flex w-full justify-center my-6">OU</span>
 					<button
 						type="submit"
-						className="bg-midnight transition-all hover:bg-blue-800 text-light w-full uppercase flex justify-center items-center mb-5 gap-3 p-2 rounded-md">
+						className="bg-midnight transition-all hover:bg-blue-800 text-light w-full uppercase flex justify-center items-center my-6 gap-3 p-2 rounded-md">
 						<FaSignInAlt />
 						Acessar
 					</button>
+					<span className="flex w-full justify-center my-2">OU</span>
 					<button className="bg-light text-midnight transition-all hover:bg-zinc-400 w-full uppercase flex justify-center items-center gap-3 p-2 rounded-md">
 						<FaGoogle />
 						Continue with Google
